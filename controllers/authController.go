@@ -34,7 +34,6 @@ func Register(c *fiber.Ctx) error {
 }
 
 func Login(c *fiber.Ctx) error {
-	c.Set("Access-Control-Allow-Origin", "http://localhost:5173")
 	var data map[string]string
 
 	if err := c.BodyParser(&data); err != nil {
