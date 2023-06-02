@@ -93,19 +93,28 @@ func Login(c *fiber.Ctx) error {
 }
 
 func User(c *fiber.Ctx) error {
-
-	cookie := c.Cookies("jwt")
-	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(SecretKey), nil
-	})
-
-	if err != nil {
+	token := c.Get("Authorization")
+	if token == "" {
 		c.Status(fiber.StatusUnauthorized)
 		return c.JSON(fiber.Map{
 			"message": "Tidak Terotentikasi",
 		})
 	}
-	claims := token.Claims.(*jwt.StandardClaims)
+
+	// Menghapus "Bearer " dari token
+	token = strings.Replace(token, "Bearer ", "", 1)
+
+	claims := &jwt.StandardClaims{}
+	parsedToken, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(SecretKey), nil
+	})
+
+	if err != nil || !parsedToken.Valid {
+		c.Status(fiber.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"message": "Tidak Terotentikasi",
+		})
+	}
 
 	var user models.User
 	database.DB.Where("id = ?", claims.Issuer).First(&user)
@@ -113,7 +122,6 @@ func User(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"user": user,
 	})
-
 }
 func Logout(c *fiber.Ctx) error {
 	cookie := fiber.Cookie{
